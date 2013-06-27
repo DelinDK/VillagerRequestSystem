@@ -1,0 +1,89 @@
+rednet.open("right")
+local transmit = peripheral.wrap("left")
+local freq 
+local rowLength=4
+local func
+
+function useFreq(id,value)
+	transmit.setFreq(id)
+	transmit.set(value)
+	sleep(.2)
+end
+
+function blink(freq)
+	useFreq(freq,true)
+	sleep(.2)
+	useFreq(freq,false)
+end
+
+function housekeeping()
+	term.clear()
+	term.setCursorPos(1,1)
+end
+
+function waitMsg()
+	id,msg,dist = rednet.receive()
+	for f,g in string.gmatch(tostring(msg),"(%a+):(%d+)") do
+		func = f
+		freq = tonumber(g)
+	end
+end
+
+function housekeeping(text)
+	term.clear()
+	term.setCursorPos(math.random(1,4),math.random(1,8))
+	term.write(text)
+end
+
+function send(freq)
+	useFreq(freq,true)
+	rednet.send(7,freq)
+end
+
+function store(freq)
+	useFreq(freq,false)
+	path()
+end
+
+function isElevator()
+	local elevator
+	
+	if freq>rowLength then
+		elevator = true
+	else
+		elevator = false
+	end
+	
+	local level = math.ceil(freq/rowLength)
+	
+	if level>2 then
+		rednet.send(15,elevator)
+	elseif level<3 then
+		rednet.send(15,not elevator)
+	end
+
+	rednet.send(9,not elevator)
+	
+	return elevator
+end
+
+function path()
+	blink(1101)
+	isElevator()
+end
+
+print(math.random(1,50))
+sleep(1)
+housekeeping()
+
+while true do 
+	waitMsg()
+	if func=="send" then
+		send(freq)
+	elseif func=="store" then
+		store(freq)
+	elseif func=="new" then
+		blink(1101)
+	end
+	housekeeping("Did '"..func.."' for "..freq)
+end

@@ -1,0 +1,14 @@
+rednet.open("top")
+
+function myJob()
+	local id,msg,dist = rednet.receive()
+	if msg then
+		redstone.setOutput("back",false)
+	else
+		redstone.setOutput("back",true)
+	end
+end
+
+while true do
+	myJob()
+end

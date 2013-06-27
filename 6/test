@@ -1,0 +1,2 @@
+term.setCursorPos(5,5)
+input = io.read()

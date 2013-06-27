@@ -1,0 +1,10 @@
+args = {...}
+local transmit = peripheral.wrap("left")
+local freq
+
+function sendCart(freq)
+	transmit.setFreq(freq)
+	transmit.set(true)
+end
+
+sendCart(tonumber(args[1]))

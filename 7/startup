@@ -1,0 +1,72 @@
+rednet.open("bottom")
+os.loadAPI("screenDesigner")
+
+local text = {"The","Shop","by","Kulopto"}
+local msg
+local buttonFunction = {}
+local buttons = screenDesigner.getButtons()
+local bool = false
+
+function newButtonFunction(buttonId,func)
+	buttonFunction[buttonId] = func
+end
+
+function waitScreen()
+		screenDesigner.clearScreen()
+		local g=colors.green
+		local w=colors.white
+		
+		screenDesigner.drawBackground(1,1,7,12,colors.green,colors.white)
+		screenDesigner.writeText(1,1,text[1],g,w)
+		screenDesigner.writeText(1,2,text[2],g,w)
+		screenDesigner.writeText(1,4,text[3],g,w)
+		screenDesigner.writeText(1,6,text[4],g,w)
+end
+
+function screen()
+	screenDesigner.drawButton(state,"NEW",1,1,7,6,1,false,colors.white,colors.blue,colors.green)
+	newButtonFunction(#buttons,newVillager)
+	screenDesigner.makeFlashButton(#buttons)
+	
+	screenDesigner.drawButton(state,"STORE",1,7,7,12,2,false,colors.white,colors.black,colors.orange)
+	newButtonFunction(#buttons,store)
+	screenDesigner.makeFlashButton(#buttons)
+end
+
+function newVillager()
+	rednet.send(16,tonumber(msg))
+	rednet.send(12,"new:"..msg)
+	bool=true
+end
+
+function store()
+	rednet.send(16,.1*tonumber(msg))
+	rednet.send(12,"store:"..msg)
+	bool = false
+end
+
+function switch(bool)
+	screenDesigner.clearScreen()
+	screenDesigner.buttonsEditor(1, "invisibleButton", bool)
+	screenDesigner.buttonsEditor(2, "invisibleButton", bool)
+end
+
+function waitMsg()
+	if not bool then
+		switch(true)
+		waitScreen()
+		--message is villager id
+		id,msg,dist = rednet.receive()
+		switch(false)
+	end
+	screenDesigner.testTouch()
+	updateId = screenDesigner.getUpdateId()
+	if updateId ~= nil then
+		buttonFunction[updateId]()
+	end
+end
+
+screen()
+while true do
+	waitMsg()
+end

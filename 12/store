@@ -1,0 +1,71 @@
+args = {...}
+local transmit = peripheral.wrap("left")
+local freq = tonumber(args[1])
+local rowLength = tonumber(args[2])
+
+function useFreq(id,value)
+	transmit.setFreq(id)
+	transmit.set(value)
+	sleep(.2)
+end
+
+function blink(freq)
+	useFreq(freq,true)
+	sleep(.2)
+	useFreq(freq,false)
+end
+
+function isElevator()
+	local elevator
+	
+	if freq>rowLength then
+		elevator = true
+	else
+		elevator = false
+	end
+	rednet.send(9,not elevator)
+	
+	useFreq(2001,true)
+	
+	return elevator
+end
+
+function elevator()
+	if isElevator() then
+		local level = math.ceil(freq/rowLength)
+		rednet.send(2,level)
+		while msg ~= "done" do
+			local id,msg,dist = rednet.receive()
+			if msg == "up" then
+				blink(2000)
+				rednet.send(2,"ready")
+			end
+			if msg == "down" then
+				blink(1000)
+				rednet.send(2,"ready")
+			end
+		end
+	end
+	print("elevator")
+	useFreq(2001,true)
+end
+
+function path()
+	useFreq(freq*10,true)
+	blink(1101)
+	isElevator()
+	elevator()
+	
+	transmit.setFreq(1100)
+	repeat
+		print("while true")
+		sleep(2)
+	until transmit.get() == "false" or false
+	
+	useFreq(2001,true)
+	useFreq(freq*10,false)
+end
+
+
+useFreq(freq,false)
+path()

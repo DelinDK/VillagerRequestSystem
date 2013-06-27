@@ -1,0 +1,14 @@
+rednet.open("top")
+
+function waitMsg()
+	id,msg,dist = rednet.receive()
+	if math.floor(tonumber(msg)) ~=  tonumber(msg) then
+		redstone.setOutput("back",false)
+	else
+		redstone.setOutput("back",true)
+	end
+end
+
+while true do
+	waitMsg()
+end

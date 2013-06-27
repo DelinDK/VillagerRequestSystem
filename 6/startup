@@ -1,0 +1,256 @@
+rednet.open("top")
+os.loadAPI("screenDesigner")
+chatp = peripheral.wrap("left")
+
+local rowLength = 4
+local pageSize = 16
+
+local page = 1
+local backgroundColor
+local idNames = {}
+local numButtons
+local nSelected = 0
+local buttons = screenDesigner.getButtons()
+local updateId
+local selected =0
+local buttonFunction = {}
+
+function newButtonFunction(buttonId,func)
+	buttonFunction[buttonId] = func
+end
+
+function fileReader()
+	local file=io.open("idNames.txt","r")
+	local lineCount = 0
+	for line in file:lines() do
+		lineCount = lineCount+1
+		for k,r,v,w in string.gmatch(line, "(.+),(.+):(.+):(.+)") do
+			idNames[lineCount]={}
+			idNames[lineCount][1] = k
+			idNames[lineCount][2] = r
+			idNames[lineCount][3] = v
+			idNames[lineCount][4] = w
+		end 
+	end
+	file:close()
+end
+
+fileReader()
+
+local drawbool
+function infoScreen()
+	if buttons[updateId]["state"] and not buttons[updateId]["invisibleButton"] or updateId == pageSize+3 then
+		local k 
+		if updateId ~= pageSize+3 then
+			k= (page-1)*pageSize+updateId
+		else
+			k= (page-1)*pageSize+nSelected
+		end
+		
+		selected = k
+		screenDesigner.drawBackground(27,3,39,3,colors.purple,colors.lime,"Name:" ..idNames[k][1])
+		screenDesigner.drawBackground(27,4,39,4,colors.red,colors.lime,"Type:"..idNames[k][2])
+		screenDesigner.drawBackground(27,5,39,5,colors.purple,colors.lime,"Rating:"..idNames[k][3])
+		screenDesigner.drawBackground(27,6,39,6,colors.red,colors.lime,"Views:"..idNames[k][4])
+		screenDesigner.drawBackground(41,2,49,7,colors.white)
+		screenDesigner.drawBackground(27,10,34,12, colors.lime, colors.white, "SEND",xpoint,math.floor((10+12)/2))
+		screenDesigner.drawBackground(36,10,43,12, colors.gray, colors.white, "CONFIG",xpoint,math.floor((10+12)/2))
+	else
+		selected = 0
+		dataScreen()
+	end
+end
+
+function dataScreen()
+	screenDesigner.drawBackground(27,3,39,3,colors.purple,colors.lime,"Name:")
+	screenDesigner.drawBackground(27,4,39,4,colors.red,colors.lime,"Type:")
+	screenDesigner.drawBackground(27,5,39,5,colors.purple,colors.lime,"Rating:")
+	screenDesigner.drawBackground(27,6,39,6,colors.red,colors.lime,"Views:")
+	screenDesigner.drawBackground(41,2,49,7,colors.white)
+	screenDesigner.drawBackground(27,10,43,17, colors.black)
+end
+
+function updateWindow()
+	local string1
+	for id=1,pageSize do
+		local bool = false
+		k = (page-1)*pageSize+id
+		
+		if k >=10 then
+			string1 = tostring(k.." -")
+		else
+			string1 = tostring(k.."  -")
+		end
+		local str
+		if id+(page-1)*pageSize<=#idNames then 
+			d=tostring(idNames[k][1])
+			str = string.sub( tostring(idNames[k][2]),string.find( tostring(idNames[k][2]),".") )
+		else
+			d=""
+			bool=true
+			string1=""
+			str=""
+		end
+		
+		screenDesigner.buttonsEditor(id, "text", d)
+		screenDesigner.buttonsEditor(id, "textAlignedLeft", string1)
+		screenDesigner.buttonsEditor(id, "textAlignedRight", str)
+		screenDesigner.buttonsEditor(id, "invisibleButton", bool)
+		
+		screenDesigner.drawBackground(23,1,23,1,colors.black,colors.white,tostring(page))
+	end
+end
+
+function window()
+	local string1
+	screenDesigner.drawBackground(1,1,25,19,colors.lime,colors.red,"#ID   --   Name", 1,1)
+	screenDesigner.drawBackground(26,1,50,19,colors.black,colors.yellow,"ABOUT", 31,1)
+	dataScreen()
+	
+	for id=1,pageSize do
+		local bool = false
+		k = (page-1)*pageSize+id
+		
+		if id%2==0 then
+			backgroundColor=colors.cyan
+		else
+			backgroundColor=colors.gray
+		end
+		local str
+		
+		if id+(page-1)*pageSize<=#idNames then 
+			 d=tostring(idNames[k][1])
+			 str = string.sub( tostring(idNames[k][2]),string.find( tostring(idNames[k][2]),".") )
+		else
+			bool=true
+			screenDesigner.drawBackground(1,2+id,25,2+id,backgroundColor)
+		end
+		
+		--determines where to align left aligned text
+		if k >=10 then
+			string1 = " -"
+		else
+			string1 = "  -"
+		end
+		
+		screenDesigner.drawButton(false,d,1,2+id,25,2+id,id,bool,colors.white,backgroundColor,colors.yellow,k..string1,str)
+		screenDesigner.buttonToggleHandler(id, 1)
+		newButtonFunction(id,infoScreen)
+	end
+	
+	--displays page number
+	screenDesigner.drawBackground(23,1,23,1,colors.black,colors.white,tostring(page))
+	
+	-- page- button
+	screenDesigner.drawButton(state, "-",19,1,19,1,pageSize+1)
+	screenDesigner.makeFlashButton(#buttons)
+	newButtonFunction(#buttons,pageD)
+	
+	-- page+ button
+	screenDesigner.drawButton(state, "+",21,1,21,1,pageSize+2)
+	screenDesigner.makeFlashButton(#buttons)
+	newButtonFunction(#buttons,pageU)
+	
+	--Send button
+	screenDesigner.drawButton(state,"",27,10,34,12,pageSize+3,true)
+	newButtonFunction(#buttons,rednetMessage)
+	screenDesigner.makeFlashButton(#buttons)
+	
+	--Config button
+	screenDesigner.drawButton(state,"",36,10,43,12,pageSize+4,true)
+	newButtonFunction(#buttons,configButton)
+	screenDesigner.makeFlashButton(#buttons)
+	
+	--New entry button
+	screenDesigner.drawButton(state,"*",50,1,50,1,pageSize+5)
+	newButtonFunction(#buttons,newEntry)
+	screenDesigner.makeFlashButton(#buttons)
+	
+	--Hidden reboot button
+	screenDesigner.drawButton(state," ",50,19,50,19,pageSize+6,false,tColor,colors.black)
+	newButtonFunction(#buttons,reboot)
+end
+
+function rednetMessage()
+	rednet.send(12,"send:"..selected)
+	idNames[selected][4] = idNames[selected][4]+1
+	
+	nSelected = selected
+	infoScreen()
+	
+	term.setCursorPos(1,3)
+	print("send:"..selected)
+	saveData(false)
+end
+
+function newEntry()
+	selected = #idNames +1
+	idNames[selected]={}
+	idNames[selected][1]="nil"..math.random(0,800)
+	idNames[selected][2]="Regular"
+	idNames[selected][3]=0
+	idNames[selected][4]=0
+	configButton()
+end
+
+function configButton()
+	local data = {"'Name' :","'Type' :","'Rating' :","'Views' :"}
+	local player,message
+	chatp.say("Type '.' to keep original.",20)
+	for spot=1,4 do
+		chatp.say("Type new: "..data[spot],20)
+		while player~="Steel_Toed_Boot" and event ~="chat" do
+			event,player,message = os.pullEvent()
+		end
+		if message=="." then 
+			message=idNames[selected][spot]
+		else 
+			idNames[selected][spot] = message
+		end
+		player,event=nil
+	end
+	saveData(true)
+end
+
+function saveData(update)
+	local file=io.open("idNames.txt","w")
+	for a=1, #idNames-1 do
+		file:write(idNames[a][1]..","..idNames[a][2]..":"..idNames[a][3]..":"..idNames[a][4].."\n")
+	end
+	local b = #idNames
+	file:write(idNames[b][1]..","..idNames[b][2]..":"..idNames[b][3]..":"..idNames[b][4])
+	
+	file:close()
+	if update then
+		updateWindow()
+	end
+end
+
+function pageU()
+	page = page+1
+	saveData(true)
+	infoScreen()
+end
+
+function pageD()
+	if page >1 then
+		page = page-1
+		saveData(true)
+		infoScreen()
+	end
+end
+
+function reboot()
+	saveData(false)
+	shell.run("reboot")
+end
+
+window()
+
+while true do
+	screenDesigner.testTouch()
+	updateId = screenDesigner.getUpdateId()
+	if updateId ~= nil then
+		buttonFunction[updateId]()
+	end
+end

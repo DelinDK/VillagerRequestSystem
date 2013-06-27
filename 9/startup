@@ -1,0 +1,11 @@
+local transmit = peripheral.wrap("left")
+rednet.open("top")
+
+function waitMsg()
+	id,msg,dist = rednet.receive()
+	redstone.setOutput("back",msg)
+end
+
+while true do
+	waitMsg()
+end
